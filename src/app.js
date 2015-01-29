@@ -48,8 +48,7 @@ var TodoApp = React.creatClass({
   },
   handleSubmit: function() {},
   render: function() {
-    
-
+    // TODO
     return ;
   }
 });
