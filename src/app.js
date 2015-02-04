@@ -10,67 +10,81 @@ app.TodoModel = function(opts) {
 };
 
 
-app.TodoList = Array;
-
-
-/* View model */
-app.TodoVM = (function(){
-  var vm = {};
-  vm.init = function() {
-    vm.list = new app.TodoList();
-
-    vm.newEntry = '';
-
-    vm.add = function() {
-      if (vm.newEntry) {
-        vm.list.push(new app.Todo({text: vm.newEntry}));
-        vm.newEntry = '';
-      }
-    };
-
-    vm.remove = function() {
-      vm.list = vm.list.filter(function(task) {
-        return !task.done;
-      });
-    }
-  }
-  return vm;
-}());
+app.Todos = Array;
 
 
 /* Views */
-var TodoList = React.createClass({
+var TodoItem = React.createClass({
+  getInitialState: function() {
+    return {item:  this.props, done: 0};
+  },
+
   render: function() {
-    var createItem = function(text) {
-      return <li>{text}</li>;
+    function counter() {
+      var x = 0;
+      return function() {
+        return x++;
+      };
+    }
+    var counter = counter();
+    var createItem = function(model) {
+      var id = 'todo-input' + counter();
+      return (
+      <li>
+        <input id={id} type="checkbox"
+               checked={model.done}
+               onChange={this.props.onToggle}/>
+        <label htmlFor={id}>{model.text}</label>
+      </li>);
     };
-    return <ul>{this.props.items.map(createItem)}</ul>;
+  }
+});
+
+var TodoList = React.createClass({
+  getInitialState: function() {
+    return {items: this.props.items, done: 0};
+  },
+
+  render: function() {
+    var createItem = function(model) {
+      var id = 'todo-input' + counter();
+      return (
+      <li>
+        <input id={id} type="checkbox"
+               checked={model.done}
+               onChange={this.props.onToggle}/>
+        <label htmlFor={id}>{model.text}</label>
+      </li>);
+    };
+    return <ul className="todo">{this.props.items.map(createItem, this)}</ul>;
   }
 });
 
 
 var TodoApp = React.createClass({
   getInitialState: function() {
-    console.log(this.props);
-    var model = this.props.model;
-    model.init();
-    return {items: model.list, newEntry: model.newEntry};
+    return {items: new this.props.model(), newEntry: '', done: 0};
   },
 
-  handleKeyDown: function(e) {
-    if (e.which === 1) {
-      return;
-    }
-
+  handleSubmit: function(e) {
     e.preventDefault();
+    var newEntry = this.state.newEntry;
     this.setState({
-      items: this.state.items.add(),
+      items: this.state.items.concat([new app.TodoModel({text: newEntry})]),
       newEntry: ''
     });
   },
 
-  onChange: function() {
-    console.log('In onchange');
+  onChange: function(e) {
+    this.setState({
+      newEntry: e.target.value
+    });
+  },
+
+  toggle: function() {
+    this.done = this.state.items.reduce(function(acc, todo) {
+      todo.done ? acc : acc++;
+    }, 0);
   },
 
   render: function() {
@@ -80,7 +94,7 @@ var TodoApp = React.createClass({
     var header = (
       <div>
         <header>
-          <h1>TODO</h1>
+          <h1>TODO {this.state.done}</h1>
         </header>
       </div>
     );
@@ -88,19 +102,19 @@ var TodoApp = React.createClass({
     if (todos.length) {
       main = (
         <section id="main">
-          <TodoList items={todos}/>
+          <TodoList items={todos} onToggle={this.toggle.bind(this)}/>
         </section>
       );
     }
 
     var footer = (
-      <form onSubmit={this.handleSubmit} id="form-submit">
+      <form onSubmit={this.handleSubmit} id="form-submit" className="pure-form">
         <input id="newValue"
                onChange={this.onChange}
                value={this.state.newEntry}
                placeholder="I need do..."
         />
-        <button>Add</button>
+        <button className="pure-button pure-button-primary">Add</button>
       </form>
     );
 
@@ -117,7 +131,7 @@ var TodoApp = React.createClass({
 
 function render() {
   React.render(
-    <TodoApp model={app.TodoVM} />,
+    <TodoApp model={app.Todos} />,
     document.getElementById('todoapp')
   );
 };
