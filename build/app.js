@@ -4,11 +4,14 @@ var app = app || {};
 
 
 /* Models */
-app.TodoModel = function(opts) {
-  this.text = !!opts ? opts.text : '';
-  this.done = !!opts ? opts.done : false;
-};
+app.TodoCounter = 0;
 
+app.TodoModel = function(opts) {
+  var opts = opts || {};
+  this.text = !!opts.text ? opts.text : '';
+  this.done = !!opts.done ? opts.done : false;
+  this.id = app.TodoCounter++;
+};
 
 app.Todos = Array;
 
@@ -16,47 +19,19 @@ app.Todos = Array;
 /* Views */
 var TodoItem = React.createClass({displayName: "TodoItem",
   getInitialState: function() {
-    return {item:  this.props, done: 0};
+    return {item: this.props.todo};
   },
 
   render: function() {
-    function counter() {
-      var x = 0;
-      return function() {
-        return x++;
-      };
-    }
-    var counter = counter();
-    var createItem = function(model) {
-      var id = 'todo-input' + counter();
-      return (
-      React.createElement("li", null, 
-        React.createElement("input", {id: id, type: "checkbox", 
-               checked: model.done, 
-               onChange: this.props.onToggle}), 
-        React.createElement("label", {htmlFor: id}, model.text)
-      ));
-    };
-  }
-});
-
-var TodoList = React.createClass({displayName: "TodoList",
-  getInitialState: function() {
-    return {items: this.props.items, done: 0};
-  },
-
-  render: function() {
-    var createItem = function(model) {
-      var id = 'todo-input' + counter();
-      return (
-      React.createElement("li", null, 
-        React.createElement("input", {id: id, type: "checkbox", 
-               checked: model.done, 
-               onChange: this.props.onToggle}), 
-        React.createElement("label", {htmlFor: id}, model.text)
-      ));
-    };
-    return React.createElement("ul", {className: "todo"}, this.props.items.map(createItem, this));
+    var model = this.state.item;
+    return (
+      React.createElement("li", {className: model.done ? 'done' : ''}, 
+        React.createElement("input", {id: model.id, type: "checkbox", 
+            checked: model.done, 
+            onChange: this.props.onToggle}), 
+        React.createElement("label", {htmlFor: model.id}, model.text)
+      )
+    );
   }
 });
 
@@ -81,40 +56,64 @@ var TodoApp = React.createClass({displayName: "TodoApp",
     });
   },
 
-  toggle: function() {
-    this.done = this.state.items.reduce(function(acc, todo) {
-      todo.done ? acc : acc++;
-    }, 0);
+  toggle: function(todo) {
+    todo.done = todo.done ? false : true;
+    this.setState({
+      done: this.state.items.reduce(function(accum, todo) {
+        return todo.done ? accum + 1 : accum;
+      }, 0)
+    });
+  },
+
+  remove: function() {
+    this.setState({
+      items: this.state.items.filter(function(todo) {
+        return !todo.done;
+      })
+    });
   },
 
   render: function() {
-    var main;
+    var main, todoItems;
     var todos = this.state.items;
 
     var header = (
-      React.createElement("div", null, 
         React.createElement("header", null, 
-          React.createElement("h1", null, "TODO ", this.state.done)
+          React.createElement("h2", null, "TODO")
         )
-      )
     );
 
     if (todos.length) {
+      todoItems = todos.map(function(todo) {
+        return (
+          React.createElement(TodoItem, {
+              key: todo.id, 
+              todo: todo, 
+              onToggle: this.toggle.bind(this, todo)})
+        );
+      }, this);
       main = (
         React.createElement("section", {id: "main"}, 
-          React.createElement(TodoList, {items: todos, onToggle: this.toggle.bind(this)})
+          React.createElement("ul", {className: "todo"}, 
+            todoItems
+          )
         )
       );
     }
 
     var footer = (
-      React.createElement("form", {onSubmit: this.handleSubmit, id: "form-submit", className: "pure-form"}, 
-        React.createElement("input", {id: "newValue", 
-               onChange: this.onChange, 
-               value: this.state.newEntry, 
-               placeholder: "I need do..."}
+      React.createElement("div", null, 
+        React.createElement("form", {id: "form-submit", 
+              className: "pure-form", 
+              onSubmit: this.handleSubmit}, 
+          React.createElement("input", {id: "newValue", 
+                onChange: this.onChange, 
+                value: this.state.newEntry, 
+                placeholder: "I need do..."}), 
+          React.createElement("button", {className: "pure-button pure-button-primary"}, "Add")
         ), 
-        React.createElement("button", {className: "pure-button pure-button-primary"}, "Add")
+        React.createElement("button", {className: "pure-button button-error", 
+                onClick: this.remove}, "Remove")
       )
     );
 

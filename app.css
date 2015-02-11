@@ -36,3 +36,12 @@ body {
 #todoapp input {
   margin-right: 10px;
 }
+
+.done {
+  text-decoration: line-through;
+}
+
+#form-submit {
+  display: inline-block;
+  margin-right: 10px;
+}

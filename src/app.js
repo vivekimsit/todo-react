@@ -4,11 +4,14 @@ var app = app || {};
 
 
 /* Models */
-app.TodoModel = function(opts) {
-  this.text = !!opts ? opts.text : '';
-  this.done = !!opts ? opts.done : false;
-};
+app.TodoCounter = 0;
 
+app.TodoModel = function(opts) {
+  var opts = opts || {};
+  this.text = !!opts.text ? opts.text : '';
+  this.done = !!opts.done ? opts.done : false;
+  this.id = app.TodoCounter++;
+};
 
 app.Todos = Array;
 
@@ -16,47 +19,19 @@ app.Todos = Array;
 /* Views */
 var TodoItem = React.createClass({
   getInitialState: function() {
-    return {item:  this.props, done: 0};
+    return {item: this.props.todo};
   },
 
   render: function() {
-    function counter() {
-      var x = 0;
-      return function() {
-        return x++;
-      };
-    }
-    var counter = counter();
-    var createItem = function(model) {
-      var id = 'todo-input' + counter();
-      return (
-      <li>
-        <input id={id} type="checkbox"
-               checked={model.done}
-               onChange={this.props.onToggle}/>
-        <label htmlFor={id}>{model.text}</label>
-      </li>);
-    };
-  }
-});
-
-var TodoList = React.createClass({
-  getInitialState: function() {
-    return {items: this.props.items, done: 0};
-  },
-
-  render: function() {
-    var createItem = function(model) {
-      var id = 'todo-input' + counter();
-      return (
-      <li>
-        <input id={id} type="checkbox"
-               checked={model.done}
-               onChange={this.props.onToggle}/>
-        <label htmlFor={id}>{model.text}</label>
-      </li>);
-    };
-    return <ul className="todo">{this.props.items.map(createItem, this)}</ul>;
+    var model = this.state.item;
+    return (
+      <li className={model.done ? 'done' : ''}>
+        <input id={model.id} type="checkbox"
+            checked={model.done}
+            onChange={this.props.onToggle}/>
+        <label htmlFor={model.id}>{model.text}</label>
+      </li>
+    );
   }
 });
 
@@ -81,41 +56,65 @@ var TodoApp = React.createClass({
     });
   },
 
-  toggle: function() {
-    this.done = this.state.items.reduce(function(acc, todo) {
-      todo.done ? acc : acc++;
-    }, 0);
+  toggle: function(todo) {
+    todo.done = todo.done ? false : true;
+    this.setState({
+      done: this.state.items.reduce(function(accum, todo) {
+        return todo.done ? accum + 1 : accum;
+      }, 0)
+    });
+  },
+
+  remove: function() {
+    this.setState({
+      items: this.state.items.filter(function(todo) {
+        return !todo.done;
+      })
+    });
   },
 
   render: function() {
-    var main;
+    var main, todoItems;
     var todos = this.state.items;
 
     var header = (
-      <div>
         <header>
-          <h1>TODO {this.state.done}</h1>
+          <h2>TODO</h2>
         </header>
-      </div>
     );
 
     if (todos.length) {
+      todoItems = todos.map(function(todo) {
+        return (
+          <TodoItem
+              key={todo.id}
+              todo={todo}
+              onToggle={this.toggle.bind(this, todo)}/>
+        );
+      }, this);
       main = (
         <section id="main">
-          <TodoList items={todos} onToggle={this.toggle.bind(this)}/>
+          <ul className="todo">
+            {todoItems}
+          </ul>
         </section>
       );
     }
 
     var footer = (
-      <form onSubmit={this.handleSubmit} id="form-submit" className="pure-form">
-        <input id="newValue"
-               onChange={this.onChange}
-               value={this.state.newEntry}
-               placeholder="I need do..."
-        />
-        <button className="pure-button pure-button-primary">Add</button>
-      </form>
+      <div>
+        <form id="form-submit"
+              className="pure-form"
+              onSubmit={this.handleSubmit}>
+          <input id="newValue"
+                onChange={this.onChange}
+                value={this.state.newEntry}
+                placeholder="I need do..."/>
+          <button className="pure-button pure-button-primary">Add</button>
+        </form>
+        <button className="pure-button button-error"
+                onClick={this.remove}>Remove</button>
+      </div>
     );
 
     return (
